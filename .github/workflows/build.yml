@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -20,27 +20,36 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
+          accept-android-sdk-licenses: true
           packages: 'platform-tools build-tools;34.0.0 platforms;android-34'
 
       - name: Build APK with Gradle
         run: |
-          # Skapa projektstrukturen
+          # Skapa projektstrukturen och flytta filer
           mkdir -p src/main/java/com/robboy/ytstorefront
+          if [ -f AndroidManifest.xml ]; then mv AndroidManifest.xml src/main/; fi
+          if [ -f MainActivity.kt ]; then mv MainActivity.kt src/main/java/com/robboy/ytstorefront/; fi
           
-          # Flytta källkodsfiler till rätt plats
-          if [ -f AndroidManifest.xml ]; then
-            mv AndroidManifest.xml src/main/
-          fi
-          if [ -f MainActivity.kt ]; then
-            mv MainActivity.kt src/main/java/com/robboy/ytstorefront/
-          fi
-          
-          # Skapa settings.gradle
+          # Skapa settings.gradle med stabil pluginManagement
           cat << 'EOF' > settings.gradle
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
           rootProject.name = 'YTStorefront'
           EOF
 
-          # Skapa build.gradle
+          # Skapa build.gradle (rotprojekt)
           cat << 'EOF' > build.gradle
           plugins {
               id 'com.android.application' version '8.1.2'
@@ -50,7 +59,6 @@ jobs:
           android {
               compileSdk 34
               namespace "com.robboy.ytstorefront"
-
               defaultConfig {
                   applicationId "com.robboy.ytstorefront"
                   minSdk 21
@@ -58,11 +66,6 @@ jobs:
                   versionCode 1
                   versionName "1.0"
               }
-          }
-
-          repositories {
-              google()
-              mavenCentral()
           }
           EOF
 
