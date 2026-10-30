@@ -3,75 +3,54 @@ name: Build APK
 on:
   push:
     branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v4
+        uses: android-actions/setup-android@v3
         with:
-          accept-android-sdk-licenses: true
           packages: 'platform-tools build-tools;34.0.0 platforms;android-34'
 
       - name: Build APK with Gradle
         run: |
-          mkdir -p src/main
-          mv AndroidManifest.xml src/main/
+          # Skapa projektstrukturen
           mkdir -p src/main/java/com/robboy/ytstorefront
-          mv MainActivity.kt src/main/java/com/robboy/ytstorefront/
           
-          # Skapa settings.gradle med rätt plugin-repositorium
+          # Flytta källkodsfiler till rätt plats
+          if [ -f AndroidManifest.xml ]; then
+            mv AndroidManifest.xml src/main/
+          fi
+          if [ -f MainActivity.kt ]; then
+            mv MainActivity.kt src/main/java/com/robboy/ytstorefront/
+          fi
+          
+          # Skapa settings.gradle
           cat << 'EOF' > settings.gradle
-          pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
           rootProject.name = 'YTStorefront'
           EOF
 
-          # Skapa build.gradle med versioner
+          # Skapa build.gradle
           cat << 'EOF' > build.gradle
           plugins {
-              id 'com.android.application' version '8.1.2' apply false
-              id 'org.jetbrains.kotlin.android' version '1.9.0' apply false
+              id 'com.android.application' version '8.1.2'
+              id 'org.jetbrains.kotlin.android' version '1.9.0'
           }
-          subprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          EOF
 
-          # Skapa app-specifik build.gradle
-          mkdir -p app
-          cat << 'EOF' > app/build.gradle
-          plugins {
-              id 'com.android.application'
-              id 'org.jetbrains.kotlin.android'
-          }
           android {
               compileSdk 34
               namespace "com.robboy.ytstorefront"
+
               defaultConfig {
                   applicationId "com.robboy.ytstorefront"
                   minSdk 21
@@ -80,8 +59,14 @@ jobs:
                   versionName "1.0"
               }
           }
+
+          repositories {
+              google()
+              mavenCentral()
+          }
           EOF
 
+          # Generera Gradle Wrapper och bygg APK
           gradle wrapper
           ./gradlew assembleDebug
 
@@ -89,5 +74,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: YouTube-Kop-Shortcut
-          path: app/build/outputs/apk/debug/*.apk
+          path: build/outputs/apk/debug/*.apk
           
