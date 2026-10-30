@@ -34,6 +34,9 @@ jobs:
           if [ -f AndroidManifest.xml ]; then mv AndroidManifest.xml src/main/; fi
           if [ -f MainActivity.kt ]; then mv MainActivity.kt src/main/java/com/robboy/ytstorefront/; fi
 
+          # namespace sätts i build.gradle, ta bort package= ur manifestet
+          sed -i 's/ *package="[^"]*"//' src/main/AndroidManifest.xml
+
           cat << 'EOF' > settings.gradle
           pluginManagement {
               repositories {
@@ -52,11 +55,6 @@ jobs:
           rootProject.name = 'YTStorefront'
           EOF
 
-          cat << 'EOF' > gradle.properties
-          android.useAndroidX=true
-          org.gradle.jvmargs=-Xmx2g
-          EOF
-
           cat << 'EOF' > build.gradle
           plugins {
               id 'com.android.application' version '8.1.2'
@@ -73,11 +71,13 @@ jobs:
                   versionCode 1
                   versionName "1.0"
               }
-          }
-
-          dependencies {
-              implementation 'androidx.core:core-ktx:1.12.0'
-              implementation 'androidx.appcompat:appcompat:1.6.1'
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget = '17'
+              }
           }
           EOF
 
