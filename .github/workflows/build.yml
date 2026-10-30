@@ -23,14 +23,17 @@ jobs:
           accept-android-sdk-licenses: true
           packages: 'platform-tools build-tools;34.0.0 platforms;android-34'
 
-      - name: Build APK with Gradle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.4'
+
+      - name: Build APK
         run: |
-          # Skapa projektstrukturen och flytta filer
           mkdir -p src/main/java/com/robboy/ytstorefront
           if [ -f AndroidManifest.xml ]; then mv AndroidManifest.xml src/main/; fi
           if [ -f MainActivity.kt ]; then mv MainActivity.kt src/main/java/com/robboy/ytstorefront/; fi
-          
-          # Skapa settings.gradle med stabil pluginManagement
+
           cat << 'EOF' > settings.gradle
           pluginManagement {
               repositories {
@@ -49,7 +52,11 @@ jobs:
           rootProject.name = 'YTStorefront'
           EOF
 
-          # Skapa build.gradle (rotprojekt)
+          cat << 'EOF' > gradle.properties
+          android.useAndroidX=true
+          org.gradle.jvmargs=-Xmx2g
+          EOF
+
           cat << 'EOF' > build.gradle
           plugins {
               id 'com.android.application' version '8.1.2'
@@ -67,15 +74,17 @@ jobs:
                   versionName "1.0"
               }
           }
+
+          dependencies {
+              implementation 'androidx.core:core-ktx:1.12.0'
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+          }
           EOF
 
-          # Generera Gradle Wrapper och bygg APK
-          gradle wrapper
-          ./gradlew assembleDebug
+          gradle assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: YouTube-Kop-Shortcut
           path: build/outputs/apk/debug/*.apk
-          
