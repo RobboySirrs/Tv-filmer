@@ -1,0 +1,60 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build APK with AMASS / Gradle
+        run: |
+          mkdir -p src/main
+          mv AndroidManifest.xml src/main/
+          mkdir -p src/main/java/com/robboy/ytstorefront
+          mv MainActivity.kt src/main/java/com/robboy/ytstorefront/
+          
+          # Skapa en minimal build.gradle
+          cat << 'EOF' > build.gradle
+          plugins {
+              id 'com.android.application'
+              id 'org.jetbrains.kotlin.android' version '1.9.0'
+          }
+          android {
+              compileSdk 34
+              namespace "com.robboy.ytstorefront"
+              defaultConfig {
+                  applicationId "com.robboy.ytstorefront"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+          }
+          EOF
+
+          # Skapa settings.gradle
+          echo "rootProject.name = 'YTStorefront'" > settings.gradle
+          
+          # Skapa wrapper och kompilera
+          gradle wrapper
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: YouTube-Kop-Shortcut
+          path: app/build/outputs/apk/debug/*.apk
+          
